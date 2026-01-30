@@ -3,33 +3,51 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"kasir-api/database"
+	"kasir-api/handlers"
+	"kasir-api/repositories"
+	"kasir-api/services"
+	"log"
 	"net/http"
+	"os"
+	"strings"
+
+	"github.com/spf13/viper"
 )
 
-func main() {
-	// CRUD Produk
-	// GET localhost:8080/api/produk/{id}
-	// PUT localhost:8080/api/produk/{id}
-	// DELETE localhost:8080/api/produk/{id}
-	http.HandleFunc("/api/produk/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			getProdukByID(w, r)
-		} else if r.Method == "PUT" {
-			updateProduk(w, r)
-		} else if r.Method == "DELETE" {
-			deleteProduk(w, r)
-		}
-	})
+type Config struct {
+	Port   string `mapStructure:"PORT"`
+	DBConn string `mapStructure:"DB_CONN"`
+}
 
-	// GET localhost:8080/api/produk
-	// POST localhost:8080/api/produk
-	http.HandleFunc("/api/produk", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			getAllProduk(w, r)
-		} else if r.Method == "POST" {
-			createProduk(w, r)
-		}
-	})
+func main() {
+	viper.AutomaticEnv() // mengecek file .env di dalam proyek go
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	if _, err := os.Stat(".env"); err == nil {
+		viper.SetConfigFile(".env")
+		_ = viper.ReadInConfig()
+	}
+
+	config := Config{
+		Port:   viper.GetString("PORT"),
+		DBConn: viper.GetString("DB_CONN"),
+	}
+
+	db, err := database.InitDB(config.DBConn)
+	if err != nil {
+		log.Fatal("Failed to initialize database: ", err)
+	}
+	defer db.Close()
+
+	// inject paket
+	productRepo := repositories.NewProductRepository(db)
+	productService := services.NewProductService(productRepo)
+	productHandler := handlers.NewProductHandler(productService)
+
+	// Setup routes
+	http.HandleFunc("/api/product", productHandler.HandleProducts)
+	http.HandleFunc("/api/product/{id}", productHandler.HandleProductByID)
 
 	// CRUD Category
 	// GET localhost:8080/api/category
@@ -63,8 +81,8 @@ func main() {
 			"message": "API running",
 		})
 	})
-	fmt.Println(("Server running di localhost:8080"))
-	err := http.ListenAndServe(":8080", nil)
+	fmt.Println(("Server running di localhost:" + config.Port))
+	err = http.ListenAndServe(":"+config.Port, nil)
 	if err != nil {
 		fmt.Println("gagal running server")
 	}
