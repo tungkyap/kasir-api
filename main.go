@@ -40,38 +40,23 @@ func main() {
 	}
 	defer db.Close()
 
-	// inject paket
+	// inject paket product
 	productRepo := repositories.NewProductRepository(db)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
 
-	// Setup routes
+	// Setup routes product
 	http.HandleFunc("/api/product", productHandler.HandleProducts)
 	http.HandleFunc("/api/product/{id}", productHandler.HandleProductByID)
 
-	// CRUD Category
-	// GET localhost:8080/api/category
-	// POST localhost:8080/api/category
-	http.HandleFunc("/api/category", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			getAllCategory(w, r)
-		} else if r.Method == "POST" {
-			createCategory(w, r)
-		}
-	})
+	// inject package category
+	categoryRepo := repositories.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
 
-	// GET localhost:8080/api/category/{id}
-	// PUT localhost:8080/api/category/{id}
-	// DELETE localhost:8080/api/category/{id}
-	http.HandleFunc("/api/category/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			getCategoryByID(w, r)
-		} else if r.Method == "PUT" {
-			updateCategory(w, r)
-		} else if r.Method == "DELETE" {
-			deleteCategory(w, r)
-		}
-	})
+	// Setup routes category
+	http.HandleFunc("/api/category", categoryHandler.HandleCategories)
+	http.HandleFunc("/api/category/{id}", categoryHandler.HandleCategoryByID)
 
 	// localhost:8080/health
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
